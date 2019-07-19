@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE properties SYSTEM 'http://java.sun.com/dtd/properties.dtd'>
+
+<properties>
+    <entry key="server.port">7500</entry>
+    <entry key="server.protocol">udp</entry>
+
+    <entry key="db.server">localhost</entry>
+    <entry key="db.user">root</entry>
+    <entry key="db.password">test2004</entry>
+    <entry key="db.name">prueba</entry>
+    
+    <entry key="mail.server">mail.yatasto.net</entry>
+    <entry key="mail.port">25</entry>
+    <entry key="mail.user">oscar.medina@yatasto.net</entry>
+    <entry key="mail.password">Test2004</entry>
+    <entry key="mail.from">oscar.medina@yatasto.net</entry>
+    
+    <entry key="maps.link">https://www.google.com/maps/?q=%LAT%,%LNG%</entry>
+</properties>
