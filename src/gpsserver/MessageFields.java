@@ -5,6 +5,7 @@
  */
 package gpsserver;
 
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
@@ -30,10 +31,10 @@ public class MessageFields {
             String[] campos = data[i].split(":");
             
             String infoKey = campos[0].substring(0, 3);
-            
+
             switch( infoKey ) {
                 case "GPS":     // Ya lo proceso en el mensaje principal.
-                    {
+                    if(campos.length > 1 ){
                         String[] values = campos[1].split(";");
                         
                         double dVal = Double.parseDouble(values[5]);
@@ -44,13 +45,17 @@ public class MessageFields {
                 case "LBS":     // No va
                     break;
                 case "STT":
-                    procesaCampoSTT(infoKey, campos[1]);
+                    if(campos.length > 1 ) {
+                        procesaCampoSTT(infoKey, campos[1]);
+                    }
                     break;
                 case "MGR":     // Km.
-                    this._campos.put("mgr", campos[1]);
+                    if(campos.length > 1 ) {
+                        this._campos.put("mgr", campos[1]);
+                    }
                     break;
                 case "ADC":
-                    {
+                    if(campos.length > 1 ){
                         int idx=1;
                         String[] adcs = campos[1].split(";");
                         
@@ -58,27 +63,38 @@ public class MessageFields {
                             this._campos.put("ai" + idx, adcn);
                             idx++;
                         }
-                }
+                    }
                     break;
                 case "GFS":     // No va
                     break;
                 case "OBD":
-                    procesaCamposOBDOAL(infoKey, campos[1]);
+                    if(campos.length > 1 ) {
+                        procesaCamposOBDOAL(infoKey, campos[1]);
+                    }
                     break;
                 case "OAL":
-                    procesaCamposOBDOAL("dtc", campos[1]);
+                    if(campos.length > 1 ) {
+                        procesaCamposOBDOAL("dtc", campos[1]);
+                    }
                     break;
                 case "FUL":     // No va
                     break;
                 case "HDB":
-                    procesaCampoHDB(infoKey, campos[1]);
+                    if(campos.length > 1 ) {
+                        procesaCampoHDB(infoKey, campos[1]);
+                    }
                     break;
                 case "CAN":     // No va
+                    if(campos.length > 1 ) {
+                        procesaCamposCAN(infoKey, campos[1]);
+                    }
                     break;
                 case "HVD":     // No va
                     break;
                 case "VIN":
-                    this._campos.put("vin", campos[1]);
+                    if(campos.length > 1 ) {
+                        this._campos.put("vin", campos[1]);
+                    }
                     break;
                 case "RFI":     // No va
                     break;
@@ -91,7 +107,9 @@ public class MessageFields {
                 case "TRP":     // No va
                     break;
                 case "SAT":
-                    procesaCampoSAT(infoKey, campos[1]);
+                    if(campos.length > 1 ) {
+                        procesaCampoSAT(infoKey, campos[1]);
+                    }
                     break;
             }
         }
@@ -107,6 +125,21 @@ public class MessageFields {
                     return true;
                 }
                 
+            } catch(Exception e) {    }
+        }
+        return ret;
+    }
+
+    public boolean canContaints() {
+        boolean ret = false;
+
+        for( HashMap.Entry<String,String> i : this._campos.entrySet()) {
+            try {
+
+                if( i.getKey().startsWith("can") ) {
+                    return true;
+                }
+
             } catch(Exception e) {    }
         }
         return ret;
@@ -148,6 +181,575 @@ public class MessageFields {
         this._campos.put(nombreCampo.toLowerCase() + "1", valores[0]);
         this._campos.put(nombreCampo.toLowerCase() + "2", valores[1]);
         this._campos.put(nombreCampo.toLowerCase() + "3", valores[2]);
+    }
+    
+    protected void procesaCamposCAN(String nombreCampo, String campo) 
+    {
+        int pos=0, offset=0;
+        Integer iVal=0;
+        Double dVal=0.0;
+        String nCampo = "";
+        
+        nombreCampo = nombreCampo.toLowerCase();
+        
+        short[] data = new short[campo.length() / 2];
+
+        for( int i=0, j=0; i < campo.length(); i+=2, j++) {
+            data[j] = (Short.parseShort(campo.substring(i, i+2), 16));
+        }
+
+        this._campos.put("can00FECA-DTC", "");
+
+        while(pos < data.length ) {
+            int len = data[pos];
+            
+            pos++;
+            
+            String strKey = String.format("%02X", data[pos]) +
+                                    String.format("%02X", data[pos+1]) +
+                                    String.format("%02X", data[pos+2]);
+            
+            pos+=3;
+            len-=3;
+            
+            offset=pos;
+            
+            switch( strKey ) {
+                case "00F004": // Engine speed
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = data[offset] & 0x0F;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_2";
+                    dVal = ((data[offset] >> 4) & 0x0F)*0.125;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+
+                    nCampo = nombreCampo + strKey + "_3";
+                    iVal = (int)data[offset];
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_4";
+                    iVal = (int)data[offset];
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    offset++;
+                    
+                    nCampo = nombreCampo + strKey + "_5";
+                    iVal = 0;
+                    iVal |= data[offset];
+                    offset++;
+                    iVal |= (data[offset] << 8);
+                    dVal = iVal * 0.125;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    
+                    nCampo = nombreCampo + strKey + "_6";
+                    iVal = (int)data[offset];
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    offset++;
+                    
+                    nCampo = nombreCampo + strKey + "_7";
+                    iVal = (int)data[offset];
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    offset++;
+                    
+                    nCampo = nombreCampo + strKey + "_8";
+                    iVal = -125 + data[offset];
+                    this._campos.put(nCampo, iVal.toString());
+                    break;
+                case "00FE6C": // Vehicle speed
+                    nCampo = nombreCampo + strKey;
+                    iVal = 0;
+                    iVal |= data[offset];
+                    offset++;
+                    iVal |= (data[offset] << 8);
+                    
+                    dVal = iVal / 256.0;
+                    // Km conv
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEC1": // High Resolution Total Vehicle Distance
+                    // Km conv
+                    nCampo = nombreCampo + strKey;
+                    
+                    iVal = 0;
+                    iVal |= data[offset];
+                    offset++;
+                    iVal |= (data[offset] << 8);
+                    offset++;
+                    iVal |= (data[offset] << 16);
+                    offset++;
+                    iVal |= (data[offset] << 24);
+                    
+                    dVal = iVal / 200.0;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEE0": // Vehicle Distance
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8) | (data[offset+2] << 16) | (data[offset+3] << 24);
+                    
+                    dVal = iVal / 8.0;
+                    
+                    offset+=4;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_2";
+                    
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8) | (data[offset+2] << 16) | (data[offset+3] << 24);
+                    
+                    dVal = iVal / 8.0;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEEE": // Engine Coolant Temperature
+                    nCampo = nombreCampo + strKey;
+                    
+                    iVal = (int)data[offset];
+                    iVal -= 40;
+                    
+                    this._campos.put(nCampo, iVal.toString());
+                    break;
+                case "00FEE5": // Engine Hours, Revolutions
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8) | (data[offset+2] << 16) | (data[offset+3] << 24);
+                    
+                    dVal = iVal * 0.05;
+                    
+                    offset+=4;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_2";
+                    
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8) | (data[offset+2] << 16) | (data[offset+3] << 24);
+                    
+                    dVal = iVal * 1000.0;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEE8": // Vehicle Direction/Speed
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    
+                    dVal = iVal / 128.00;
+                    
+                    offset+=2;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_2";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    
+                    dVal = iVal / 256.00;
+                    
+                    offset+=2;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_3";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8) | (data[offset+2] << 16) | (data[offset+3] << 24);
+                    
+                    dVal = (iVal / 128.00) - 200;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset+=4;
+                    
+                    nCampo = nombreCampo + strKey + "_4";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8) | (data[offset+2] << 16) | (data[offset+3] << 24);
+                    
+                    dVal = (iVal / 8.00) - 2500;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEE9": // Fuel consumption
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8) | (data[offset+2] << 16) | (data[offset+3] << 24);
+                    
+                    dVal = (iVal * 0.5);
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset+=4;
+                    
+                    nCampo = nombreCampo + strKey + "_2";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8) | (data[offset+2] << 16) | (data[offset+3] << 24);
+                    
+                    dVal = (iVal * 0.5);
+                    
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00F003": // Accelerator Pedal Position  // VER
+                    nCampo = nombreCampo + strKey;
+                    
+                    iVal = data[offset] & 0x0F;
+                    dVal = iVal * 0.4;
+
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEEB": // Component Identification
+                    String sVal = "";
+                    
+                    for( int i=0; i < len; i++ ) {
+                        sVal +=(char)data[pos+i];
+                    }
+                    
+                    String[] ids = sVal.split("\\*");
+
+                    nCampo = nombreCampo + strKey + "_1";
+                    if( ids.length > 0 ) { this._campos.put(nCampo, ids[0]); }
+                    
+                    nCampo = nombreCampo + strKey + "_2";
+                    if( ids.length > 1 ) { this._campos.put(nCampo, ids[1]); }
+
+                    nCampo = nombreCampo + strKey + "_3";
+                    if( ids.length > 2 ) { this._campos.put(nCampo, ids[2]); }
+                    
+                    nCampo = nombreCampo + strKey + "_4";
+                    if( ids.length > 3 ) { this._campos.put(nCampo, ids[3]); }
+                    break;                    
+                case "00FEEF": // Engine Fluid Level/Pressure 1
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 4.0;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_2";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.05;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_3";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.4;
+                    this._campos.put(nCampo, dVal.toString());
+
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_4";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 4.0;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_5";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    dVal = -225.0 + (iVal / 128.0);
+                    this._campos.put(nCampo, dVal.toString());
+
+                    offset+=2;
+                    nCampo = nombreCampo + strKey + "_6";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 2.0;
+                    this._campos.put(nCampo, dVal.toString());
+
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_7";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.4;
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEF1": // Cruise Control/Vehicle Speed
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = (int)data[offset];
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_2";
+                    iVal = (int)(data[offset] >> 2);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_3";
+                    iVal = (int)(data[offset] >> 4);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_4";
+                    iVal = (int)(data[offset] >> 6);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_5";
+                    iVal = 0;
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    
+                    dVal = iVal / 256.00;
+                    
+                    offset+=2;
+                    
+                    this._campos.put(nCampo, dVal.toString());
+
+                    nCampo = nombreCampo + strKey + "_6";
+                    iVal = (int)data[offset];
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_7";
+                    iVal = (int)(data[offset] >> 2);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_8";
+                    iVal = (int)(data[offset] >> 4);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_9";
+                    iVal = (int)(data[offset] >> 6);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+
+                    offset++;
+
+                    nCampo = nombreCampo + strKey + "_10";
+                    iVal = (int)data[offset];
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_11";
+                    iVal = (int)(data[offset] >> 2);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_12";
+                    iVal = (int)(data[offset] >> 4);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_13";
+                    iVal = (int)(data[offset] >> 6);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_14";
+                    iVal = (int)data[offset];
+                    this._campos.put(nCampo, iVal.toString());
+
+                    nCampo = nombreCampo + strKey + "_15";
+                    iVal = (int)data[offset];
+                    iVal &= 0x1F;
+                    this._campos.put(nCampo, iVal.toString());
+
+                    nCampo = nombreCampo + strKey + "_16";
+                    iVal = (int)(data[offset] >> 5);
+                    iVal &= 0x07;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    offset++;
+                    
+                    nCampo = nombreCampo + strKey + "_17";
+                    iVal = (int)data[offset];
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_18";
+                    iVal = (int)(data[offset] >> 2);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_19";
+                    iVal = (int)(data[offset] >> 4);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    nCampo = nombreCampo + strKey + "_20";
+                    iVal = (int)(data[offset] >> 6);
+                    iVal &= 0x03;
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    break;
+                case "00FEF6": // Inlet/Exhaust Conditions 1
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.5;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_2";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 2.0;
+                    this._campos.put(nCampo, dVal.toString());
+
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_3";
+                    iVal = (int)data[offset];
+                    dVal = iVal - 40.0;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_4";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 2.0;
+                    this._campos.put(nCampo, dVal.toString());
+
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_5";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.05;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;                    
+                    nCampo = nombreCampo + strKey + "_6";
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    dVal = -273.0 + 0.03125 * iVal;
+                    this._campos.put(nCampo, dVal.toString());
+
+                    offset+=2;
+                    nCampo = nombreCampo + strKey + "_7";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.5;
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEF7": // Vehicle Electrical Power 1
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = (int)data[offset];
+                    dVal = -125.0 + iVal;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_2";
+                    iVal = (int)data[offset];
+                    this._campos.put(nCampo, iVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_3";
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    dVal = iVal * 0.05;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset+=2;
+                    nCampo = nombreCampo + strKey + "_4";
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    dVal = iVal * 0.05;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset+=2;
+                    nCampo = nombreCampo + strKey + "_5";
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    dVal = iVal * 0.05;
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FEFC": // R) Dash Display
+                    nCampo = nombreCampo + strKey + "_1";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.4;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_2";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.4;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_3";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 2.0;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_4";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.5;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset++;
+                    nCampo = nombreCampo + strKey + "_5";
+                    iVal = data[offset] | (data[offset+1] << 8);
+                    dVal = -273 + 0.03125 * iVal;
+                    this._campos.put(nCampo, dVal.toString());
+                    
+                    offset+=2;
+                    nCampo = nombreCampo + strKey + "_6";
+                    iVal = (int)data[offset];
+                    dVal = iVal * 0.4;
+                    this._campos.put(nCampo, dVal.toString());
+                    break;
+                case "00FECA": // (DM1)Active DTCs and lamp status information
+                    //nCampo = nombreCampo + strKey;
+                    sVal = DtcsDecode(data, offset, len);
+                    this._campos.put("can00FECA-DTC", sVal);
+                    break;
+                case "00FECC": //(DM2)Previously active DTCs and lamp status information
+                    //nCampo = nombreCampo + strKey;
+                    sVal = DtcsDecode(data, offset, len);
+                    this._campos.put("can00FECA-DTC", sVal);
+                    break;
+                default:
+                    nCampo = nombreCampo + strKey;
+                    StringBuilder sb = new StringBuilder();
+                    
+                    for(int idx=0; idx < len; idx++ ) {
+                        sb.append(String.format("%02X", data[offset+idx]));
+                    }
+                    
+                    sVal = sb.toString();
+                    
+                    this._campos.put(nCampo, sVal);
+                    break;
+            }
+            
+            pos += len;
+        }
+    }
+    
+    protected String DtcsDecode(short[] data, int offset, int len)
+    {
+        String result="";
+        String sVal = "";
+        String[] status = { "OFF", "ON","Unknown", "Unknown" };
+
+        int iVal = data[offset];
+        
+        sVal = status[(iVal >> 6 ) & 0x03];
+        this._campos.put("can00FECA-MIL", sVal);
+
+        sVal = status[(iVal >> 4 ) & 0x03];
+        this._campos.put("can00FECA-RSL", sVal);
+
+        sVal = status[(iVal >> 2 ) & 0x03];
+        this._campos.put("can00FECA-AWL", sVal);
+
+        sVal = status[(iVal ) & 0x03];
+        this._campos.put("can00FECA-PL", sVal);
+
+        for( int i=0; i < (len-2)/4; i++ ) {
+//            result += "DTC: " + i;
+            
+            long lSPN = data[offset+(2 + 4 * (i) + 2)] >> 5;
+            lSPN = (lSPN << 8 ) + data[offset+(2 + 4 * i + 1)];
+            lSPN = (lSPN << 8 ) + data[offset+(2 + 4 * i)];
+            long lFMI = (byte)data[offset+(2 + 4 * i + 2)] & 0x1F;
+            long lOC = (byte)data[offset+(2 + 4 * i + 3)] & 0x7F;
+            
+            result += "SPN: " + lSPN + " ";
+            result += "FMI: " + lFMI + " ";
+            result += "OC: " + lOC + " ";
+        }
+
+        return result;
     }
     
     protected void procesaCamposOBDOAL(String nombreCampo, String campo)
