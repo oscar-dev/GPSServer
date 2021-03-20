@@ -187,8 +187,8 @@ public class ParserThread extends DBThread {
 /*                sql = "UPDATE gs_objects SET net_protocol=?, ip=?, dt_server=?, "
                         + "dt_tracker=?, lat=?, lng=?, altitude=?, angle=?, speed=?, loc_valid='1', ";*/
 
-                if( message._messageFields.obdContaints() || message._messageFields.canContaints()) {
-                    
+                //if( message._messageFields.obdContaints() || message._messageFields.canContaints()) {
+                if( message._messageFields.updateParams() ) {
                         sql += "params=?,";
                 }
                 
@@ -217,7 +217,8 @@ public class ParserThread extends DBThread {
                 ps.setLong(idx++, km);
                 ps.setDouble(idx++, message.getSpeed());
                 
-                if( message._messageFields.obdContaints() || message._messageFields.canContaints()) {
+                //if( message._messageFields.obdContaints() || message._messageFields.canContaints()) {
+                if( message._messageFields.updateParams() ) {
                     ps.setString(idx++, message._messageFields.toString());
                 }
                 

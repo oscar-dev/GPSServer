@@ -114,6 +114,31 @@ public class MessageFields {
             }
         }
     }
+
+    public boolean updateParams()
+    {
+        for( HashMap.Entry<String,String> i : this._campos.entrySet()) {
+            try {
+                if( i.getKey().startsWith("obd") ) {
+                    return true;
+                }
+
+                if( i.getKey().startsWith("obd") ) {
+                    return true;
+                }
+
+                if( i.getKey().startsWith("ai1") ||
+                        i.getKey().startsWith("ai2") ||
+                        i.getKey().startsWith("ai3") ||
+                        i.getKey().startsWith("ai4") ) {
+                    return true;
+                }
+
+            } catch(Exception e) {    }
+        }
+
+        return false;
+    }
     
     public boolean obdContaints() {
         boolean ret = false;

@@ -15,6 +15,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import javax.mail.Authenticator;
+//import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
@@ -366,7 +367,13 @@ public abstract class EventManager {
 
         message.setFrom(new InternetAddress(mFrom));
 
-        message.setRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(this._notify_email_address));
+        String mails[] = this._notify_email_address.split(",");
+
+        for (String itemMail : mails ) {
+
+            message.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(itemMail.trim()));
+        }
+        //message.setRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(this._notify_email_address));
 
         message.setSubject(subject);
 
